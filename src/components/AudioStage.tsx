@@ -39,6 +39,9 @@ export default function AudioStage({
         <button className="ov-btn" aria-label="Voltar" onClick={onBack}>
           ←
         </button>
+        <div className="stage-title" title={book.title}>
+          {book.title}
+        </div>
         <div className="stage-actions">
           <button className="ov-btn" aria-label="Capítulos" onClick={onOpenChapters}>
             ☰
@@ -47,19 +50,6 @@ export default function AudioStage({
             ⚙
           </button>
         </div>
-      </div>
-
-      <div className="stage-cover">
-        {book.coverUrl ? (
-          <img src={book.coverUrl} alt={book.title} />
-        ) : (
-          <div className="stage-cover-fallback">{book.title.slice(0, 1).toUpperCase()}</div>
-        )}
-      </div>
-
-      <div className="stage-meta">
-        <div className="stage-title">{book.title}</div>
-        {book.author && <div className="stage-author">{book.author}</div>}
       </div>
 
       <div className="stage-seek">

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { LoadedBook, ReadingPos, Settings, Toggles, TrackKey, Translations } from './types'
 import { useAudio } from './hooks/useAudio'
 import { loadSession, loadTranslations, saveTranslation } from './lib/sessionStore'
-import { isTranslatorSupported, translateParagraphs } from './lib/translate'
+import { translateParagraphs } from './lib/translate'
 import FileSetup from './components/FileSetup'
 import AudioStage from './components/AudioStage'
 import TextToggles from './components/TextToggles'
@@ -15,8 +15,6 @@ const TOGGLES_KEY = 'epub.toggles'
 const SETTINGS_KEY = 'epub.settings'
 const DEFAULT_TOGGLES: Toggles = { en: true, pt: true }
 const DEFAULT_SETTINGS: Settings = { fontScale: 1, fontFamily: 'system', speed: 1 }
-const UNSUPPORTED_MSG =
-  'Tradução automática indisponível neste navegador (requer Chrome/Edge 138+).'
 
 const FONT_STACKS: Record<Settings['fontFamily'], string> = {
   system: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
@@ -119,10 +117,6 @@ export default function App() {
     }
     if (translations[chapter.id]) {
       setTransStatus(null)
-      return
-    }
-    if (!isTranslatorSupported()) {
-      setTransStatus(UNSUPPORTED_MSG)
       return
     }
     if (inFlight.current.has(chapter.id)) return

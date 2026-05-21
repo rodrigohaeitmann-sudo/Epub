@@ -2,7 +2,6 @@ import { useState } from 'react'
 import type { LoadedBook } from '../types'
 import { parseEpub } from '../lib/parseEpub'
 import { saveSession } from '../lib/sessionStore'
-import { isTranslatorSupported } from '../lib/translate'
 
 interface Props {
   onReady: (media: LoadedBook) => void
@@ -15,7 +14,6 @@ export default function FileSetup({ onReady }: Props) {
   const [busy, setBusy] = useState(false)
 
   const canStart = epub !== null && audio !== null && !busy
-  const translatorOk = isTranslatorSupported()
 
   async function handleStart() {
     if (!epub || !audio) return
@@ -72,14 +70,6 @@ export default function FileSetup({ onReady }: Props) {
         />
         {audio && <small>{audio.name}</small>}
       </label>
-
-      {!translatorOk && (
-        <p className="setup-warn">
-          Este navegador não tem a API de tradução nativa. A leitura em inglês, o áudio e
-          o dicionário funcionam normalmente, mas a tradução automática para português
-          exige Chrome ou Edge recentes (versão 138+).
-        </p>
-      )}
 
       {error && <p className="setup-error">{error}</p>}
 

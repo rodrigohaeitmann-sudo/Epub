@@ -1,4 +1,6 @@
-// Wrapper around the Chrome on-device Translator API (EN -> PT).
+// EN -> PT translation. Prefers Chrome's on-device Translator API (desktop
+// Chrome/Edge); falls back to a free network translation when the on-device
+// API is unavailable (e.g. Android, Safari, Firefox).
 
 const SOURCE = 'en'
 const TARGET = 'pt'
@@ -25,10 +27,10 @@ export async function getAvailability(): Promise<TranslatorAvailability> {
 
 let translatorPromise: Promise<TranslatorInstance> | null = null
 
-export function getTranslator(onDownload?: (loaded: number) => void): Promise<TranslatorInstance> {
+function getTranslator(onDownload?: (loaded: number) => void): Promise<TranslatorInstance> {
   if (!translatorPromise) {
     const T = getStatic()
-    if (!T) return Promise.reject(new Error('Translator API indisponível neste navegador.'))
+    if (!T) return Promise.reject(new Error('Translator API indisponível.'))
     translatorPromise = T.create({
       sourceLanguage: SOURCE,
       targetLanguage: TARGET,
@@ -43,6 +45,42 @@ export function getTranslator(onDownload?: (loaded: number) => void): Promise<Tr
   return translatorPromise
 }
 
+// Split long text on sentence/word boundaries to keep request URLs reasonable.
+function splitChunks(text: string, max = 1500): string[] {
+  if (text.length <= max) return [text]
+  const parts: string[] = []
+  let rest = text
+  while (rest.length > max) {
+    let cut = rest.lastIndexOf('. ', max)
+    if (cut < max * 0.5) cut = rest.lastIndexOf(' ', max)
+    if (cut <= 0) cut = max
+    parts.push(rest.slice(0, cut + 1))
+    rest = rest.slice(cut + 1)
+  }
+  if (rest) parts.push(rest)
+  return parts
+}
+
+async function networkTranslate(text: string): Promise<string> {
+  const chunks = splitChunks(text)
+  const results: string[] = []
+  for (const chunk of chunks) {
+    const url =
+      `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${SOURCE}` +
+      `&tl=${TARGET}&dt=t&q=${encodeURIComponent(chunk)}`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`tradução de rede falhou (${res.status})`)
+    // Response shape: [[[ "translated", "original", ... ], ...], ...]
+    const data: unknown = await res.json()
+    const segments = Array.isArray(data) && Array.isArray(data[0]) ? data[0] : []
+    const out = segments
+      .map((s) => (Array.isArray(s) && typeof s[0] === 'string' ? s[0] : ''))
+      .join('')
+    results.push(out)
+  }
+  return results.join('')
+}
+
 export interface TranslateProgress {
   done: number
   total: number
@@ -54,13 +92,32 @@ export async function translateParagraphs(
   onProgress?: (p: TranslateProgress) => void,
   onDownload?: (loaded: number) => void,
 ): Promise<string[]> {
-  const translator = await getTranslator(onDownload)
+  let chromeT: TranslatorInstance | null = null
+  if (isTranslatorSupported()) {
+    try {
+      chromeT = await getTranslator(onDownload)
+    } catch {
+      chromeT = null
+    }
+  }
+
   const out: string[] = []
   for (let i = 0; i < texts.length; i++) {
-    try {
-      out.push(await translator.translate(texts[i]))
-    } catch {
+    const text = texts[i]
+    if (!text.trim()) {
       out.push('')
+      onProgress?.({ done: i + 1, total: texts.length })
+      continue
+    }
+    try {
+      out.push(chromeT ? await chromeT.translate(text) : await networkTranslate(text))
+    } catch {
+      // On-device failed mid-way: retry over the network.
+      try {
+        out.push(await networkTranslate(text))
+      } catch {
+        out.push('')
+      }
     }
     onProgress?.({ done: i + 1, total: texts.length })
   }
