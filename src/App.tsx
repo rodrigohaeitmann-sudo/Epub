@@ -16,7 +16,7 @@ import SettingsPanel from './components/SettingsPanel'
 const TOGGLES_KEY = 'epub.toggles'
 const SETTINGS_KEY = 'epub.settings'
 const DEFAULT_TOGGLES: Toggles = { en: true, pt: true }
-const DEFAULT_SETTINGS: Settings = { fontScale: 1, fontFamily: 'system', speed: 1 }
+const DEFAULT_SETTINGS: Settings = { fontScale: 1, fontFamily: 'system', speed: 1, syncOffset: 0 }
 
 const FONT_STACKS: Record<Settings['fontFamily'], string> = {
   system: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
@@ -212,6 +212,7 @@ export default function App() {
         translation={chapter ? translations[chapter.id] : undefined}
         toggles={toggles}
         activeParagraph={paragraphIndex}
+        syncOffset={settings.syncOffset}
         onSelectParagraph={selectParagraph}
         status={transStatus}
       />

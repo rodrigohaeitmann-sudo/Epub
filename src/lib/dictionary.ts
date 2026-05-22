@@ -26,13 +26,14 @@ function load(): Promise<Dict> {
   return cache
 }
 
-// Strip surrounding punctuation/quotes, keep internal apostrophes and hyphens.
+// Strip surrounding punctuation/quotes (including boundary apostrophes like
+// 'word' or dogs'), keep apostrophes/hyphens that sit inside the word.
 function normalize(raw: string): string {
   return raw
     .toLowerCase()
-    .replace(/^[^a-z']+/, '')
-    .replace(/[^a-z']+$/, '')
     .replace(/[’‘]/g, "'")
+    .replace(/^[^a-z]+/, '')
+    .replace(/[^a-z]+$/, '')
 }
 
 // Common inflections -> likely lemma. Order matters; first hit in the dict wins.

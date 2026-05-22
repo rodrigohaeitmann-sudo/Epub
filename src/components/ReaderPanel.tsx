@@ -7,11 +7,17 @@ interface Props {
   translation?: string[]
   toggles: Toggles
   activeParagraph: number
+  syncOffset: number
   onSelectParagraph: (index: number) => void
   status?: string | null
 }
 
 const HAS_LETTER = /[a-zA-Z]/
+
+// Drop surrounding punctuation/quotes, keep apostrophes/hyphens inside the word.
+function cleanWord(tok: string): string {
+  return tok.replace(/^[^\p{L}]+/u, '').replace(/[^\p{L}]+$/u, '')
+}
 
 function EnglishText({ text, onWord }: { text: string; onWord: (w: string) => void }) {
   const tokens = text.split(/(\s+)/)
@@ -19,7 +25,7 @@ function EnglishText({ text, onWord }: { text: string; onWord: (w: string) => vo
     <>
       {tokens.map((tok, i) =>
         HAS_LETTER.test(tok) ? (
-          <button key={i} type="button" className="word" onClick={() => onWord(tok)}>
+          <button key={i} type="button" className="word" onClick={() => onWord(cleanWord(tok))}>
             {tok}
           </button>
         ) : (
@@ -35,6 +41,7 @@ export default function ReaderPanel({
   translation,
   toggles,
   activeParagraph,
+  syncOffset,
   onSelectParagraph,
   status,
 }: Props) {
@@ -44,13 +51,18 @@ export default function ReaderPanel({
   const ptParas = useRef<Array<HTMLDivElement | null>>([])
   const enParas = useRef<Array<HTMLDivElement | null>>([])
   const syncing = useRef(false)
+  const lastChapterId = useRef<string | null>(null)
 
   const showEn = toggles.en
   const showPt = toggles.pt
   const dual = showEn && showPt
 
-  // Bring the active paragraph to the top of each visible pane.
+  // Bring the active paragraph to the top of each pane, but only when the
+  // chapter changes — selecting a paragraph (e.g. to look up a word) must not
+  // jerk the text around.
   useEffect(() => {
+    if (!chapter || lastChapterId.current === chapter.id) return
+    lastChapterId.current = chapter.id
     syncing.current = true
     const toTop = (pane: HTMLDivElement | null, el: HTMLElement | null | undefined) => {
       if (pane && el) pane.scrollTop = Math.max(0, el.offsetTop - 12)
@@ -107,7 +119,7 @@ export default function ReaderPanel({
                 className={`para ${i === activeParagraph ? 'para-active' : ''}`}
                 onClick={() => onSelectParagraph(i)}
               >
-                <p className="para-pt">{translation?.[i] ?? ''}</p>
+                <p className="para-pt">{translation?.[i + syncOffset] ?? ''}</p>
               </div>
             ))}
           </div>

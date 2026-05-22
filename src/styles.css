@@ -438,6 +438,41 @@ button {
   color: #fff;
 }
 
+.setting-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: -4px;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepper-btn {
+  flex: 0 0 auto;
+  min-width: 0;
+  width: 48px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.stepper-value {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper-reset {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
 /* ---------- Chapter list ---------- */
 .chapter-list {
   list-style: none;
