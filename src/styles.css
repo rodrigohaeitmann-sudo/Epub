@@ -306,9 +306,9 @@ button {
 .controls {
   display: flex;
   align-items: center;
-  justify-content: space-around;
-  gap: 12px;
-  padding: 14px 24px calc(14px + env(safe-area-inset-bottom));
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 12px calc(14px + env(safe-area-inset-bottom));
   background: var(--panel);
   border-top: 1px solid #232733;
 }
@@ -324,6 +324,30 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
+}
+
+.ctrl-skip {
+  width: 52px;
+  height: 52px;
+  position: relative;
+  flex-direction: column;
+  gap: 0;
+}
+
+.skip-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.skip-num {
+  position: absolute;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -35%);
 }
 
 .ctrl-play {

@@ -155,26 +155,9 @@ export default function App() {
     setToggles((t) => ({ ...t, [key]: !t[key] }))
   }
 
-  function nextParagraph() {
-    setPos((p) => {
-      const ci = Math.min(Math.max(p.chapter, 0), chapters.length - 1)
-      const count = chapters[ci]?.paragraphs.length ?? 0
-      if (p.paragraph < count - 1) return { chapter: ci, paragraph: p.paragraph + 1 }
-      if (ci < chapters.length - 1) return { chapter: ci + 1, paragraph: 0 }
-      return p
-    })
-  }
-
-  function prevParagraph() {
-    setPos((p) => {
-      const ci = Math.min(Math.max(p.chapter, 0), chapters.length - 1)
-      if (p.paragraph > 0) return { chapter: ci, paragraph: p.paragraph - 1 }
-      if (ci > 0) {
-        const prevCount = chapters[ci - 1].paragraphs.length
-        return { chapter: ci - 1, paragraph: Math.max(0, prevCount - 1) }
-      }
-      return p
-    })
+  function skipBy(seconds: number) {
+    const max = Number.isFinite(duration) && duration > 0 ? duration : Infinity
+    seekTo(Math.min(Math.max(currentTime + seconds, 0), max))
   }
 
   function goToChapter(i: number) {
@@ -232,12 +215,7 @@ export default function App() {
         onSelectParagraph={selectParagraph}
         status={transStatus}
       />
-      <ControlsFooter
-        isPlaying={isPlaying}
-        onPrev={prevParagraph}
-        onTogglePlay={togglePlay}
-        onNext={nextParagraph}
-      />
+      <ControlsFooter isPlaying={isPlaying} onTogglePlay={togglePlay} onSkip={skipBy} />
       {showChapters && (
         <ChapterNav
           chapters={chapters}
