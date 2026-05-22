@@ -263,7 +263,7 @@ export async function parseAudioChapters(file: Blob): Promise<AudioChapter[]> {
     if (!moov) return []
     const moovBuf = await file.slice(moov.start, moov.start + moov.size).arrayBuffer()
     const dv = new DataView(moovBuf)
-    const moovPayload = 8 // after moov header (assumes 32-bit size header)
+    const moovPayload = dv.getUint32(0) === 1 ? 16 : 8 // skip 64-bit size header if present
     const moovEnd = moovBuf.byteLength
 
     const udta = findChild(dv, moovPayload, moovEnd, 'udta')

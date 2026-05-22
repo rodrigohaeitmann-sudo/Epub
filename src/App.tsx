@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { LoadedBook, ReadingPos, Settings, Toggles, TrackKey, Translations } from './types'
 import { useAudio } from './hooks/useAudio'
-import { loadSession, loadTranslations, saveTranslation } from './lib/sessionStore'
+import { loadSession, loadTranslations, saveTranslation, saveSession } from './lib/sessionStore'
 import { translateParagraphs } from './lib/translate'
+import { parseAudioChapters } from './lib/parseAudioChapters'
 import FileSetup from './components/FileSetup'
 import AudioStage from './components/AudioStage'
 import TextToggles from './components/TextToggles'
@@ -70,18 +71,24 @@ export default function App() {
   // Reopen the last session automatically (e.g. after the app is backgrounded).
   useEffect(() => {
     loadSession()
-      .then((session) => {
-        if (session) {
-          const coverUrl = session.coverBlob
-            ? URL.createObjectURL(session.coverBlob)
-            : undefined
-          setMedia({
-            audioUrl: URL.createObjectURL(session.audioBlob),
-            bookId: session.bookId,
-            book: { ...session.book, coverUrl },
-            audioChapters: session.audioChapters ?? [],
-          })
+      .then(async (session) => {
+        if (!session) return
+        const coverUrl = session.coverBlob ? URL.createObjectURL(session.coverBlob) : undefined
+        let audioChapters = session.audioChapters ?? []
+        // Sessions saved before audio-chapter support (or that failed to parse)
+        // won't have chapters; re-extract them from the stored audio.
+        if (audioChapters.length === 0) {
+          audioChapters = await parseAudioChapters(session.audioBlob).catch(() => [])
+          if (audioChapters.length > 0) {
+            void saveSession({ ...session, audioChapters }).catch(() => {})
+          }
         }
+        setMedia({
+          audioUrl: URL.createObjectURL(session.audioBlob),
+          bookId: session.bookId,
+          book: { ...session.book, coverUrl },
+          audioChapters,
+        })
       })
       .catch(() => undefined)
       .finally(() => setRestoring(false))
