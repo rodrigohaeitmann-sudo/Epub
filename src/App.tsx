@@ -9,6 +9,7 @@ import TextToggles from './components/TextToggles'
 import ReaderPanel from './components/ReaderPanel'
 import ControlsFooter from './components/ControlsFooter'
 import ChapterNav from './components/ChapterNav'
+import AudioChapterNav from './components/AudioChapterNav'
 import SettingsPanel from './components/SettingsPanel'
 
 const TOGGLES_KEY = 'epub.toggles'
@@ -53,6 +54,7 @@ export default function App() {
   const [transStatus, setTransStatus] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [showChapters, setShowChapters] = useState(false)
+  const [showAudioChapters, setShowAudioChapters] = useState(false)
   const inFlight = useRef<Set<string>>(new Set())
 
   const { audioRef, currentTime, duration, isPlaying, togglePlay, seekTo } = useAudio(media?.bookId)
@@ -77,6 +79,7 @@ export default function App() {
             audioUrl: URL.createObjectURL(session.audioBlob),
             bookId: session.bookId,
             book: { ...session.book, coverUrl },
+            audioChapters: session.audioChapters ?? [],
           })
         }
       })
@@ -206,9 +209,11 @@ export default function App() {
         book={media.book}
         currentTime={currentTime}
         duration={duration}
+        hasAudioChapters={media.audioChapters.length > 0}
         onSeek={seekTo}
         onBack={handleBack}
         onOpenChapters={() => setShowChapters(true)}
+        onOpenAudioChapters={() => setShowAudioChapters(true)}
         onOpenSettings={() => setShowSettings(true)}
       />
       <TextToggles toggles={toggles} onToggle={handleToggle} />
@@ -232,6 +237,17 @@ export default function App() {
           current={chapterIndex}
           onSelect={goToChapter}
           onClose={() => setShowChapters(false)}
+        />
+      )}
+      {showAudioChapters && (
+        <AudioChapterNav
+          chapters={media.audioChapters}
+          currentTime={currentTime}
+          onSelect={(start) => {
+            seekTo(start)
+            setShowAudioChapters(false)
+          }}
+          onClose={() => setShowAudioChapters(false)}
         />
       )}
       {showSettings && (

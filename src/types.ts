@@ -4,6 +4,11 @@ export interface Chapter {
   paragraphs: string[]
 }
 
+export interface AudioChapter {
+  title: string
+  start: number // seconds
+}
+
 export interface Book {
   title: string
   author?: string
@@ -22,6 +27,7 @@ export interface LoadedBook {
   audioUrl: string
   bookId: string
   book: Book
+  audioChapters: AudioChapter[]
 }
 
 export interface Settings {

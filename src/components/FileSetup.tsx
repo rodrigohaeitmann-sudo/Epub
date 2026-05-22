@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { LoadedBook } from '../types'
 import { parseEpub } from '../lib/parseEpub'
+import { parseAudioChapters } from '../lib/parseAudioChapters'
 import { saveSession } from '../lib/sessionStore'
 
 interface Props {
@@ -21,6 +22,7 @@ export default function FileSetup({ onReady }: Props) {
     setBusy(true)
     try {
       const parsed = await parseEpub(await epub.arrayBuffer())
+      const audioChapters = await parseAudioChapters(audio).catch(() => [])
       const bookId = `${epub.name}:${epub.size}`
       const coverUrl = parsed.coverBlob ? URL.createObjectURL(parsed.coverBlob) : undefined
       const book = {
@@ -29,13 +31,14 @@ export default function FileSetup({ onReady }: Props) {
         coverUrl,
         chapters: parsed.chapters,
       }
-      onReady({ audioUrl: URL.createObjectURL(audio), bookId, book })
+      onReady({ audioUrl: URL.createObjectURL(audio), bookId, book, audioChapters })
       // Persist for auto-reopen in the background (best-effort).
       void saveSession({
         bookId,
         audioBlob: audio,
         coverBlob: parsed.coverBlob,
         book: { title: parsed.title, author: parsed.author, chapters: parsed.chapters },
+        audioChapters,
       }).catch(() => {})
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao ler o EPUB.')

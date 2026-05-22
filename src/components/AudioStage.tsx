@@ -7,9 +7,11 @@ interface Props {
   book: Book
   currentTime: number
   duration: number
+  hasAudioChapters: boolean
   onSeek: (time: number) => void
   onBack: () => void
   onOpenChapters: () => void
+  onOpenAudioChapters: () => void
   onOpenSettings: () => void
 }
 
@@ -28,9 +30,11 @@ export default function AudioStage({
   book,
   currentTime,
   duration,
+  hasAudioChapters,
   onSeek,
   onBack,
   onOpenChapters,
+  onOpenAudioChapters,
   onOpenSettings,
 }: Props) {
   return (
@@ -43,7 +47,16 @@ export default function AudioStage({
           {book.title}
         </div>
         <div className="stage-actions">
-          <button className="ov-btn" aria-label="Capítulos" onClick={onOpenChapters}>
+          {hasAudioChapters && (
+            <button
+              className="ov-btn"
+              aria-label="Capítulos do áudio"
+              onClick={onOpenAudioChapters}
+            >
+              🎧
+            </button>
+          )}
+          <button className="ov-btn" aria-label="Capítulos do texto" onClick={onOpenChapters}>
             ☰
           </button>
           <button className="ov-btn" aria-label="Configurações" onClick={onOpenSettings}>
