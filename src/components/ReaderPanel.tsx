@@ -7,12 +7,16 @@ interface Props {
   translation?: string[]
   toggles: Toggles
   activeParagraph: number
-  syncOffset: number
+  lineOffset: number
+  onChangeLineOffset: (n: number) => void
   onSelectParagraph: (index: number) => void
   status?: string | null
 }
 
 const HAS_LETTER = /[a-zA-Z]/
+const LINE_OFFSET_MIN = -10
+const LINE_OFFSET_MAX = 10
+const OVERLAY_HIDE_MS = 2800
 
 // Drop surrounding punctuation/quotes, keep apostrophes/hyphens inside the word.
 function cleanWord(tok: string): string {
@@ -36,38 +40,88 @@ function EnglishText({ text, onWord }: { text: string; onWord: (w: string) => vo
   )
 }
 
+const clampOffset = (n: number) => Math.max(LINE_OFFSET_MIN, Math.min(LINE_OFFSET_MAX, n))
+const formatOffset = (n: number) => (n > 0 ? `+${n}` : String(n))
+
 export default function ReaderPanel({
   chapter,
   translation,
   toggles,
   activeParagraph,
-  syncOffset,
+  lineOffset,
+  onChangeLineOffset,
   onSelectParagraph,
   status,
 }: Props) {
   const [selected, setSelected] = useState<string | null>(null)
+  const [overlayVisible, setOverlayVisible] = useState(false)
   const ptRef = useRef<HTMLDivElement>(null)
   const enRef = useRef<HTMLDivElement>(null)
   const ptParas = useRef<Array<HTMLDivElement | null>>([])
   const enParas = useRef<Array<HTMLDivElement | null>>([])
   const syncing = useRef(false)
   const lastChapterId = useRef<string | null>(null)
+  const hideTimer = useRef<number | null>(null)
 
   const showEn = toggles.en
   const showPt = toggles.pt
   const dual = showEn && showPt
 
-  // Bring the active paragraph to the top of each pane, but only when the
-  // chapter changes — selecting a paragraph (e.g. to look up a word) must not
-  // jerk the text around.
+  // Measure the rendered PT line-height so the offset is in actual text lines.
+  function lineHeightPx(): number {
+    const el = ptParas.current.find((p) => p) || enParas.current.find((p) => p)
+    if (!el) return 24
+    const lh = parseFloat(getComputedStyle(el).lineHeight)
+    return Number.isFinite(lh) && lh > 0 ? lh : 24
+  }
+
+  function offsetPx(): number {
+    return lineOffset * lineHeightPx()
+  }
+
+  // Two-way scroll sync between panes, with the PT pane offset by N lines.
+  function syncFromEn() {
+    const en = enRef.current
+    const pt = ptRef.current
+    if (!en || !pt || syncing.current) return
+    syncing.current = true
+    const enMax = en.scrollHeight - en.clientHeight
+    const ptMax = pt.scrollHeight - pt.clientHeight
+    const ratio = enMax > 0 ? en.scrollTop / enMax : 0
+    pt.scrollTop = Math.max(0, Math.min(ptMax, ratio * ptMax + offsetPx()))
+    requestAnimationFrame(() => {
+      syncing.current = false
+    })
+  }
+
+  function syncFromPt() {
+    const en = enRef.current
+    const pt = ptRef.current
+    if (!en || !pt || syncing.current) return
+    syncing.current = true
+    const enMax = en.scrollHeight - en.clientHeight
+    const ptMax = pt.scrollHeight - pt.clientHeight
+    const ratio = ptMax > 0 ? (pt.scrollTop - offsetPx()) / ptMax : 0
+    en.scrollTop = Math.max(0, Math.min(enMax, ratio * enMax))
+    requestAnimationFrame(() => {
+      syncing.current = false
+    })
+  }
+
+  // Bring the active paragraph to the top of each pane on chapter change.
+  // Selecting a paragraph (to look up a word) must NOT scroll, only highlight.
   useEffect(() => {
     if (!chapter || lastChapterId.current === chapter.id) return
     lastChapterId.current = chapter.id
     syncing.current = true
-    const toTop = (pane: HTMLDivElement | null, el: HTMLElement | null | undefined) => {
-      if (pane && el) pane.scrollTop = Math.max(0, el.offsetTop - 12)
+    const toTop = (
+      pane: HTMLDivElement | null,
+      el: HTMLElement | null | undefined,
+      extra = 0,
+    ) => {
+      if (pane && el) pane.scrollTop = Math.max(0, el.offsetTop - 12 + extra)
     }
-    if (showPt) toTop(ptRef.current, ptParas.current[activeParagraph])
+    if (showPt) toTop(ptRef.current, ptParas.current[activeParagraph], dual ? offsetPx() : 0)
     if (showEn) toTop(enRef.current, enParas.current[activeParagraph])
     const id = requestAnimationFrame(() => {
       syncing.current = false
@@ -75,16 +129,28 @@ export default function ReaderPanel({
     return () => cancelAnimationFrame(id)
   }, [activeParagraph, chapter?.id, showEn, showPt, dual])
 
-  // Keep both panes at the same relative scroll position.
-  function handleSync(from: HTMLDivElement | null, to: HTMLDivElement | null) {
-    if (!from || !to || syncing.current) return
-    syncing.current = true
-    const denom = from.scrollHeight - from.clientHeight
-    const ratio = denom > 0 ? from.scrollTop / denom : 0
-    to.scrollTop = ratio * (to.scrollHeight - to.clientHeight)
-    requestAnimationFrame(() => {
-      syncing.current = false
-    })
+  // Re-apply the line offset (visually nudge PT) whenever it changes.
+  useEffect(() => {
+    if (!dual) return
+    syncFromEn()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lineOffset, dual])
+
+  function reveal() {
+    setOverlayVisible(true)
+    if (hideTimer.current) clearTimeout(hideTimer.current)
+    hideTimer.current = window.setTimeout(() => setOverlayVisible(false), OVERLAY_HIDE_MS)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current)
+    }
+  }, [])
+
+  function adjust(delta: number) {
+    onChangeLineOffset(clampOffset(lineOffset + delta))
+    reveal()
   }
 
   if (!chapter) {
@@ -107,7 +173,8 @@ export default function ReaderPanel({
           <div
             className={`pane pane-pt ${dual ? '' : 'pane-solo'}`}
             ref={ptRef}
-            onScroll={dual ? () => handleSync(ptRef.current, enRef.current) : undefined}
+            onScroll={dual ? syncFromPt : undefined}
+            onClick={dual ? reveal : undefined}
           >
             {status && <p className="reader-status">{status}</p>}
             {paras.map((_, i) => (
@@ -119,9 +186,38 @@ export default function ReaderPanel({
                 className={`para ${i === activeParagraph ? 'para-active' : ''}`}
                 onClick={() => onSelectParagraph(i)}
               >
-                <p className="para-pt">{translation?.[i + syncOffset] ?? ''}</p>
+                <p className="para-pt">{translation?.[i] ?? ''}</p>
               </div>
             ))}
+            {dual && overlayVisible && (
+              <div className="sync-overlay-wrap">
+                <div
+                  className="sync-overlay"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    reveal()
+                  }}
+                >
+                  <button
+                    className="sync-btn"
+                    aria-label="Retroceder uma linha"
+                    disabled={lineOffset <= LINE_OFFSET_MIN}
+                    onClick={() => adjust(-1)}
+                  >
+                    −
+                  </button>
+                  <span className="sync-value">{formatOffset(lineOffset)} linhas</span>
+                  <button
+                    className="sync-btn"
+                    aria-label="Avançar uma linha"
+                    disabled={lineOffset >= LINE_OFFSET_MAX}
+                    onClick={() => adjust(1)}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -129,7 +225,7 @@ export default function ReaderPanel({
           <div
             className={`pane pane-en ${dual ? '' : 'pane-solo'}`}
             ref={enRef}
-            onScroll={dual ? () => handleSync(enRef.current, ptRef.current) : undefined}
+            onScroll={dual ? syncFromEn : undefined}
           >
             {paras.map((text, i) => (
               <div

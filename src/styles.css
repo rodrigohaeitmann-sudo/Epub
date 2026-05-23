@@ -438,39 +438,58 @@ button {
   color: #fff;
 }
 
-.setting-hint {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: -4px;
+.sync-overlay-wrap {
+  position: sticky;
+  bottom: 12px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  margin-top: 12px;
+  z-index: 4;
 }
 
-.stepper {
+.sync-overlay {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(20, 22, 30, 0.92);
+  border: 1px solid #2a2f3d;
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  animation: sync-fade 0.18s ease;
+  pointer-events: auto;
 }
 
-.stepper-btn {
-  flex: 0 0 auto;
-  min-width: 0;
-  width: 48px;
+@keyframes sync-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.sync-btn {
+  background: #232733;
+  color: var(--text);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
   font-size: 20px;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.stepper-value {
-  flex: 1;
-  text-align: center;
-  font-size: 16px;
+.sync-btn:disabled {
+  opacity: 0.35;
+}
+
+.sync-value {
+  font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-}
-
-.stepper-reset {
-  flex: 0 0 auto;
-  min-width: 0;
-  padding: 10px 14px;
-  font-size: 13px;
+  min-width: 72px;
+  text-align: center;
 }
 
 /* ---------- Chapter list ---------- */

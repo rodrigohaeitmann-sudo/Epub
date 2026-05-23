@@ -26,9 +26,6 @@ const SPEEDS: { label: string; value: number }[] = [
   { label: '1,5×', value: 1.5 },
 ]
 
-const clamp = (n: number) => Math.max(-30, Math.min(30, n))
-const formatOffset = (n: number) => (n > 0 ? `+${n}` : String(n))
-
 export default function SettingsPanel({ settings, onChange, onClose }: Props) {
   const set = (patch: Partial<Settings>) => onChange({ ...settings, ...patch })
 
@@ -87,32 +84,6 @@ export default function SettingsPanel({ settings, onChange, onClose }: Props) {
           </div>
         </div>
 
-        <div className="setting">
-          <span className="setting-label">Sincronia da tradução</span>
-          <span className="setting-hint">Desloca a tradução em relação ao texto, em parágrafos.</span>
-          <div className="stepper">
-            <button
-              className="opt stepper-btn"
-              aria-label="Menos um parágrafo"
-              onClick={() => set({ syncOffset: clamp(settings.syncOffset - 1) })}
-            >
-              −
-            </button>
-            <span className="stepper-value">{formatOffset(settings.syncOffset)}</span>
-            <button
-              className="opt stepper-btn"
-              aria-label="Mais um parágrafo"
-              onClick={() => set({ syncOffset: clamp(settings.syncOffset + 1) })}
-            >
-              +
-            </button>
-            {settings.syncOffset !== 0 && (
-              <button className="opt stepper-reset" onClick={() => set({ syncOffset: 0 })}>
-                Zerar
-              </button>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   )

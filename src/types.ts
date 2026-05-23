@@ -34,7 +34,7 @@ export interface Settings {
   fontScale: number
   fontFamily: 'system' | 'serif' | 'mono'
   speed: number
-  syncOffset: number // shifts the PT translation by N paragraphs relative to the EN text
+  lineOffset: number // visual shift of the PT pane relative to the EN pane, in text lines
 }
 
 export interface ReadingPos {
