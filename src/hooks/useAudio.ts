@@ -79,6 +79,13 @@ export function useAudio(bookId?: string) {
     if (audio) audio.currentTime = Math.max(0, time)
   }, [])
 
+  const skipBy = useCallback((seconds: number) => {
+    const audio = audioRef.current
+    if (!audio) return
+    const max = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : Infinity
+    audio.currentTime = Math.min(Math.max(audio.currentTime + seconds, 0), max)
+  }, [])
+
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
     if (!audio) return
@@ -86,5 +93,5 @@ export function useAudio(bookId?: string) {
     else audio.pause()
   }, [])
 
-  return { audioRef, currentTime, duration, isPlaying, togglePlay, seekTo }
+  return { audioRef, currentTime, duration, isPlaying, togglePlay, seekTo, skipBy }
 }

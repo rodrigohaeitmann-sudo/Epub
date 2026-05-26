@@ -11,6 +11,7 @@ import ReaderPanel from './components/ReaderPanel'
 import ControlsFooter from './components/ControlsFooter'
 import ChapterNav from './components/ChapterNav'
 import AudioChapterNav from './components/AudioChapterNav'
+import SearchPanel from './components/SearchPanel'
 import SettingsPanel from './components/SettingsPanel'
 
 const TOGGLES_KEY = 'epub.toggles'
@@ -56,9 +57,52 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showChapters, setShowChapters] = useState(false)
   const [showAudioChapters, setShowAudioChapters] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
   const inFlight = useRef<Set<string>>(new Set())
 
-  const { audioRef, currentTime, duration, isPlaying, togglePlay, seekTo } = useAudio(media?.bookId)
+  const { audioRef, currentTime, duration, isPlaying, togglePlay, seekTo, skipBy } = useAudio(
+    media?.bookId,
+  )
+
+  // Wire OS / headphone media keys: triple-press (previoustrack) and
+  // double-press (nexttrack) become 5-second skips for the audiobook.
+  useEffect(() => {
+    if (!media || typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
+    const ms = navigator.mediaSession
+    try {
+      ms.metadata = new MediaMetadata({
+        title: media.book.title,
+        artist: media.book.author ?? '',
+        album: 'Audiobook',
+        artwork: media.book.coverUrl
+          ? [{ src: media.book.coverUrl, sizes: '512x512', type: 'image/jpeg' }]
+          : [],
+      })
+    } catch {
+      /* ignore */
+    }
+    const setHandler = (action: MediaSessionAction, handler: MediaSessionActionHandler | null) => {
+      try {
+        ms.setActionHandler(action, handler)
+      } catch {
+        /* not supported */
+      }
+    }
+    setHandler('previoustrack', () => skipBy(-5))
+    setHandler('nexttrack', () => skipBy(5))
+    setHandler('seekbackward', (d) => skipBy(-(d.seekOffset || 5)))
+    setHandler('seekforward', (d) => skipBy(d.seekOffset || 5))
+    setHandler('play', () => audioRef.current?.play())
+    setHandler('pause', () => audioRef.current?.pause())
+    return () => {
+      setHandler('previoustrack', null)
+      setHandler('nexttrack', null)
+      setHandler('seekbackward', null)
+      setHandler('seekforward', null)
+      setHandler('play', null)
+      setHandler('pause', null)
+    }
+  }, [media, skipBy, audioRef])
 
   useEffect(() => {
     localStorage.setItem(TOGGLES_KEY, JSON.stringify(toggles))
@@ -113,6 +157,15 @@ export default function App() {
     if (audioRef.current) audioRef.current.playbackRate = settings.speed
   }, [settings.speed, media?.bookId, audioRef])
 
+  useEffect(() => {
+    if (!media || typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
+    try {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
+    } catch {
+      /* ignore */
+    }
+  }, [isPlaying, media])
+
   const chapters = media?.book.chapters ?? []
   const chapterIndex = Math.min(Math.max(pos.chapter, 0), Math.max(0, chapters.length - 1))
   const chapter = chapters[chapterIndex] ?? null
@@ -153,11 +206,6 @@ export default function App() {
 
   function handleToggle(key: TrackKey) {
     setToggles((t) => ({ ...t, [key]: !t[key] }))
-  }
-
-  function skipBy(seconds: number) {
-    const max = Number.isFinite(duration) && duration > 0 ? duration : Infinity
-    seekTo(Math.min(Math.max(currentTime + seconds, 0), max))
   }
 
   function goToChapter(i: number) {
@@ -202,6 +250,7 @@ export default function App() {
         hasAudioChapters={media.audioChapters.length > 0}
         onSeek={seekTo}
         onBack={handleBack}
+        onOpenSearch={() => setShowSearch(true)}
         onOpenChapters={() => setShowChapters(true)}
         onOpenAudioChapters={() => setShowAudioChapters(true)}
         onOpenSettings={() => setShowSettings(true)}
@@ -235,6 +284,16 @@ export default function App() {
             setShowAudioChapters(false)
           }}
           onClose={() => setShowAudioChapters(false)}
+        />
+      )}
+      {showSearch && (
+        <SearchPanel
+          chapters={chapters}
+          onSelect={(ci, pi) => {
+            setPos({ chapter: ci, paragraph: pi })
+            setShowSearch(false)
+          }}
+          onClose={() => setShowSearch(false)}
         />
       )}
       {showSettings && (
