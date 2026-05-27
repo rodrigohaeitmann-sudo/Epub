@@ -139,16 +139,51 @@ button {
   gap: 10px;
 }
 
-.stage-title {
+.book-progress {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  position: relative;
+  height: 30px;
+  border-radius: 8px;
+  background: #232733;
+  overflow: hidden;
+}
+
+.book-progress-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(79, 140, 255, 0.32);
+  transition: width 0.3s ease;
+}
+
+.book-progress-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  font-size: 12px;
   font-weight: 700;
-  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.book-progress-rem {
+  opacity: 0.85;
+}
+
+.stage-chapter {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-top: -4px;
 }
 
 .stage-actions {

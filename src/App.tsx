@@ -247,7 +247,7 @@ export default function App() {
         book={media.book}
         currentTime={currentTime}
         duration={duration}
-        hasAudioChapters={media.audioChapters.length > 0}
+        audioChapters={media.audioChapters}
         onSeek={seekTo}
         onBack={handleBack}
         onOpenSearch={() => setShowSearch(true)}

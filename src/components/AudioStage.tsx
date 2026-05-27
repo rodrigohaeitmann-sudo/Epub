@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import type { Book } from '../types'
+import type { AudioChapter, Book } from '../types'
 
 interface Props {
   audioRef: RefObject<HTMLAudioElement>
@@ -7,7 +7,7 @@ interface Props {
   book: Book
   currentTime: number
   duration: number
-  hasAudioChapters: boolean
+  audioChapters: AudioChapter[]
   onSeek: (time: number) => void
   onBack: () => void
   onOpenSearch: () => void
@@ -25,13 +25,30 @@ function formatTime(seconds: number): string {
   return `${h > 0 ? h + ':' : ''}${mm}:${s.toString().padStart(2, '0')}`
 }
 
+function formatRemaining(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '0min'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (h > 0) return `${h}h ${m.toString().padStart(2, '0')}min`
+  return `${m}min`
+}
+
+function currentChapterIdx(chapters: AudioChapter[], time: number): number {
+  let idx = -1
+  for (let i = 0; i < chapters.length; i++) {
+    if (chapters[i].start <= time + 0.5) idx = i
+    else break
+  }
+  return idx
+}
+
 export default function AudioStage({
   audioRef,
   src,
   book,
   currentTime,
   duration,
-  hasAudioChapters,
+  audioChapters,
   onSeek,
   onBack,
   onOpenSearch,
@@ -39,20 +56,47 @@ export default function AudioStage({
   onOpenAudioChapters,
   onOpenSettings,
 }: Props) {
+  const hasChapters = audioChapters.length > 0
+  const chapIdx = hasChapters ? currentChapterIdx(audioChapters, currentTime) : -1
+  const chapter = chapIdx >= 0 ? audioChapters[chapIdx] : null
+  const chapterStart = chapter ? chapter.start : 0
+  const chapterEnd =
+    chapter && chapIdx + 1 < audioChapters.length
+      ? audioChapters[chapIdx + 1].start
+      : duration || 0
+  const chapterDuration = Math.max(0, chapterEnd - chapterStart)
+  const chapterPos = Math.max(0, Math.min(chapterDuration, currentTime - chapterStart))
+
+  const seekMax = chapter ? chapterDuration : duration || 0
+  const seekValue = chapter ? chapterPos : Math.min(currentTime, duration || 0)
+  const leftLabel = chapter ? formatTime(chapterPos) : formatTime(currentTime)
+  const rightLabel = chapter ? formatTime(chapterDuration) : formatTime(duration)
+
+  const pct = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0
+  const remaining = duration > 0 ? Math.max(0, duration - currentTime) : 0
+
   return (
     <div className="audio-stage">
       <div className="stage-top">
         <button className="ov-btn" aria-label="Voltar" onClick={onBack}>
           ←
         </button>
-        <div className="stage-title" title={book.title}>
-          {book.title}
+        <div
+          className="book-progress"
+          role="img"
+          aria-label={`${Math.round(pct)} por cento concluído, ${formatRemaining(remaining)} restantes de ${book.title}`}
+        >
+          <div className="book-progress-fill" style={{ width: `${pct}%` }} />
+          <div className="book-progress-text">
+            <span className="book-progress-pct">{Math.round(pct)}%</span>
+            <span className="book-progress-rem">−{formatRemaining(remaining)}</span>
+          </div>
         </div>
         <div className="stage-actions">
           <button className="ov-btn" aria-label="Buscar no texto" onClick={onOpenSearch}>
             🔍
           </button>
-          {hasAudioChapters && (
+          {hasChapters && (
             <button
               className="ov-btn"
               aria-label="Capítulos do áudio"
@@ -70,18 +114,24 @@ export default function AudioStage({
         </div>
       </div>
 
+      {chapter && (
+        <div className="stage-chapter" title={chapter.title}>
+          {chapter.title}
+        </div>
+      )}
+
       <div className="stage-seek">
-        <span className="time">{formatTime(currentTime)}</span>
+        <span className="time">{leftLabel}</span>
         <input
           className="seek"
           type="range"
           min={0}
-          max={duration || 0}
+          max={seekMax}
           step={0.1}
-          value={Math.min(currentTime, duration || 0)}
-          onChange={(e) => onSeek(Number(e.target.value))}
+          value={seekValue}
+          onChange={(e) => onSeek(chapterStart + Number(e.target.value))}
         />
-        <span className="time">{formatTime(duration)}</span>
+        <span className="time">{rightLabel}</span>
       </div>
 
       <audio ref={audioRef} src={src} preload="metadata" />
