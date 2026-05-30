@@ -14,8 +14,6 @@ interface Props {
 }
 
 const HAS_LETTER = /[a-zA-Z]/
-const LINE_OFFSET_MIN = -10
-const LINE_OFFSET_MAX = 10
 const OVERLAY_HIDE_MS = 2800
 
 // Drop surrounding punctuation/quotes, keep apostrophes/hyphens inside the word.
@@ -40,7 +38,6 @@ function EnglishText({ text, onWord }: { text: string; onWord: (w: string) => vo
   )
 }
 
-const clampOffset = (n: number) => Math.max(LINE_OFFSET_MIN, Math.min(LINE_OFFSET_MAX, n))
 const formatOffset = (n: number) => (n > 0 ? `+${n}` : String(n))
 
 export default function ReaderPanel({
@@ -149,7 +146,7 @@ export default function ReaderPanel({
   }, [])
 
   function adjust(delta: number) {
-    onChangeLineOffset(clampOffset(lineOffset + delta))
+    onChangeLineOffset(lineOffset + delta)
     reveal()
   }
 
@@ -201,7 +198,6 @@ export default function ReaderPanel({
                   <button
                     className="sync-btn"
                     aria-label="Retroceder uma linha"
-                    disabled={lineOffset <= LINE_OFFSET_MIN}
                     onClick={() => adjust(-1)}
                   >
                     −
@@ -210,7 +206,6 @@ export default function ReaderPanel({
                   <button
                     className="sync-btn"
                     aria-label="Avançar uma linha"
-                    disabled={lineOffset >= LINE_OFFSET_MAX}
                     onClick={() => adjust(1)}
                   >
                     +
