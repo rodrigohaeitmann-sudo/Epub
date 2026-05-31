@@ -58,6 +58,7 @@ export default function App() {
   const [showChapters, setShowChapters] = useState(false)
   const [showAudioChapters, setShowAudioChapters] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
+  const [jumpKey, setJumpKey] = useState(0)
   const inFlight = useRef<Set<string>>(new Set())
 
   const { audioRef, currentTime, duration, isPlaying, togglePlay, seekTo, skipBy } = useAudio(
@@ -210,7 +211,13 @@ export default function App() {
 
   function goToChapter(i: number) {
     setPos({ chapter: i, paragraph: 0 })
+    setJumpKey((k) => k + 1)
     setShowChapters(false)
+  }
+
+  function jumpToParagraph(chapter: number, paragraph: number) {
+    setPos({ chapter, paragraph })
+    setJumpKey((k) => k + 1)
   }
 
   function selectParagraph(i: number) {
@@ -261,6 +268,7 @@ export default function App() {
         translation={chapter ? translations[chapter.id] : undefined}
         toggles={toggles}
         activeParagraph={paragraphIndex}
+        jumpKey={jumpKey}
         lineOffset={settings.lineOffset}
         onChangeLineOffset={(n) => setSettings((s) => ({ ...s, lineOffset: n }))}
         onSelectParagraph={selectParagraph}
@@ -290,7 +298,7 @@ export default function App() {
         <SearchPanel
           chapters={chapters}
           onSelect={(ci, pi) => {
-            setPos({ chapter: ci, paragraph: pi })
+            jumpToParagraph(ci, pi)
             setShowSearch(false)
           }}
           onClose={() => setShowSearch(false)}

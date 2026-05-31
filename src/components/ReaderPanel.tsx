@@ -7,6 +7,7 @@ interface Props {
   translation?: string[]
   toggles: Toggles
   activeParagraph: number
+  jumpKey: number
   lineOffset: number
   onChangeLineOffset: (n: number) => void
   onSelectParagraph: (index: number) => void
@@ -45,6 +46,7 @@ export default function ReaderPanel({
   translation,
   toggles,
   activeParagraph,
+  jumpKey,
   lineOffset,
   onChangeLineOffset,
   onSelectParagraph,
@@ -58,6 +60,7 @@ export default function ReaderPanel({
   const enParas = useRef<Array<HTMLDivElement | null>>([])
   const syncing = useRef(false)
   const lastChapterId = useRef<string | null>(null)
+  const lastJumpKey = useRef<number>(-1)
   const hideTimer = useRef<number | null>(null)
 
   const showEn = toggles.en
@@ -105,11 +108,16 @@ export default function ReaderPanel({
     })
   }
 
-  // Bring the active paragraph to the top of each pane on chapter change.
-  // Selecting a paragraph (to look up a word) must NOT scroll, only highlight.
+  // Bring the active paragraph to the top of each pane on a chapter change OR
+  // an explicit jump (chapter list, search). Plain paragraph clicks (word
+  // lookup) leave jumpKey alone, so they only highlight without scrolling.
   useEffect(() => {
-    if (!chapter || lastChapterId.current === chapter.id) return
+    if (!chapter) return
+    const chapterChanged = lastChapterId.current !== chapter.id
+    const jumped = lastJumpKey.current !== jumpKey
+    if (!chapterChanged && !jumped) return
     lastChapterId.current = chapter.id
+    lastJumpKey.current = jumpKey
     syncing.current = true
     const toTop = (
       pane: HTMLDivElement | null,
@@ -124,7 +132,7 @@ export default function ReaderPanel({
       syncing.current = false
     })
     return () => cancelAnimationFrame(id)
-  }, [activeParagraph, chapter?.id, showEn, showPt, dual])
+  }, [activeParagraph, chapter?.id, jumpKey, showEn, showPt, dual])
 
   // Re-apply the line offset (visually nudge PT) whenever it changes.
   useEffect(() => {
