@@ -62,6 +62,7 @@ export default function ReaderPanel({
   const lastChapterId = useRef<string | null>(null)
   const lastJumpKey = useRef<number>(-1)
   const hideTimer = useRef<number | null>(null)
+  const posTimer = useRef<number | null>(null)
 
   const showEn = toggles.en
   const showPt = toggles.pt
@@ -158,6 +159,46 @@ export default function ReaderPanel({
     reveal()
   }
 
+  // While the user scrolls, find the paragraph at the top of the viewport and
+  // save it as the current reading position. Debounced so we only commit once
+  // scrolling settles.
+  function scheduleTrackPos() {
+    if (posTimer.current != null) clearTimeout(posTimer.current)
+    posTimer.current = window.setTimeout(() => {
+      posTimer.current = null
+      if (!chapter) return
+      const enPane = enRef.current
+      const ptPane = ptRef.current
+      const pane = enPane || ptPane
+      const paras = enPane ? enParas.current : ptParas.current
+      if (!pane) return
+      const target = pane.scrollTop + 13 // matches the toTop offset (12) plus 1px fuzz
+      let topIdx = 0
+      for (let i = 0; i < paras.length; i++) {
+        const el = paras[i]
+        if (!el) continue
+        if (el.offsetTop > target) break
+        topIdx = i
+      }
+      if (topIdx !== activeParagraph) onSelectParagraph(topIdx)
+    }, 250)
+  }
+
+  // Cancel any pending position update when the chapter switches so we don't
+  // overwrite the new chapter's restored position with the old one.
+  useEffect(() => {
+    if (posTimer.current != null) {
+      clearTimeout(posTimer.current)
+      posTimer.current = null
+    }
+  }, [chapter?.id])
+
+  useEffect(() => {
+    return () => {
+      if (posTimer.current != null) clearTimeout(posTimer.current)
+    }
+  }, [])
+
   if (!chapter) {
     return (
       <div className="reader">
@@ -178,7 +219,10 @@ export default function ReaderPanel({
           <div
             className={`pane pane-pt ${dual ? '' : 'pane-solo'}`}
             ref={ptRef}
-            onScroll={dual ? syncFromPt : undefined}
+            onScroll={() => {
+              if (dual) syncFromPt()
+              scheduleTrackPos()
+            }}
             onClick={dual ? reveal : undefined}
           >
             {status && <p className="reader-status">{status}</p>}
@@ -228,7 +272,10 @@ export default function ReaderPanel({
           <div
             className={`pane pane-en ${dual ? '' : 'pane-solo'}`}
             ref={enRef}
-            onScroll={dual ? syncFromEn : undefined}
+            onScroll={() => {
+              if (dual) syncFromEn()
+              scheduleTrackPos()
+            }}
           >
             {paras.map((text, i) => (
               <div
