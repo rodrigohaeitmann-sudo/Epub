@@ -19,12 +19,17 @@ const FONTS: { label: string; value: Settings['fontFamily'] }[] = [
   { label: 'Mono', value: 'mono' },
 ]
 
-const SPEEDS: { label: string; value: number }[] = [
-  { label: '0,75×', value: 0.75 },
-  { label: '1×', value: 1 },
-  { label: '1,25×', value: 1.25 },
-  { label: '1,5×', value: 1.5 },
-]
+const SPEED_MIN = 0.6
+const SPEED_MAX = 2.0
+const SPEED_STEP = 0.05
+
+const roundSpeed = (n: number) => Math.round(n * 20) / 20
+
+function formatSpeed(n: number): string {
+  const v = roundSpeed(n)
+  const s = v.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')
+  return s.replace('.', ',') + '×'
+}
 
 export default function SettingsPanel({ settings, onChange, onClose }: Props) {
   const set = (patch: Partial<Settings>) => onChange({ ...settings, ...patch })
@@ -70,17 +75,23 @@ export default function SettingsPanel({ settings, onChange, onClose }: Props) {
         </div>
 
         <div className="setting">
-          <span className="setting-label">Velocidade do áudio</span>
-          <div className="opt-row">
-            {SPEEDS.map((o) => (
-              <button
-                key={o.value}
-                className={`opt ${settings.speed === o.value ? 'opt-on' : ''}`}
-                onClick={() => set({ speed: o.value })}
-              >
-                {o.label}
-              </button>
-            ))}
+          <div className="setting-head">
+            <span className="setting-label">Velocidade do áudio</span>
+            <span className="setting-value">{formatSpeed(settings.speed)}</span>
+          </div>
+          <input
+            className="speed-slider"
+            type="range"
+            min={SPEED_MIN}
+            max={SPEED_MAX}
+            step={SPEED_STEP}
+            value={settings.speed}
+            onChange={(e) => set({ speed: roundSpeed(Number(e.target.value)) })}
+          />
+          <div className="speed-ticks">
+            <span>{formatSpeed(SPEED_MIN)}</span>
+            <span>1×</span>
+            <span>{formatSpeed(SPEED_MAX)}</span>
           </div>
         </div>
 

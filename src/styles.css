@@ -541,6 +541,35 @@ button {
   color: #fff;
 }
 
+.setting-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.setting-value {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.speed-slider {
+  width: 100%;
+  height: 24px;
+  accent-color: var(--accent);
+}
+
+.speed-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: -4px;
+}
+
 .sync-overlay-wrap {
   position: sticky;
   bottom: 12px;
