@@ -16,7 +16,7 @@ export default function TextToggles({ toggles, onToggle }: Props) {
       {(Object.keys(LABELS) as TrackKey[]).map((key) => (
         <button
           key={key}
-          className={`chip ${toggles[key] ? 'chip-on' : ''}`}
+          className={`chip chip-${key} ${toggles[key] ? 'chip-on' : ''}`}
           aria-pressed={toggles[key]}
           onClick={() => onToggle(key)}
         >

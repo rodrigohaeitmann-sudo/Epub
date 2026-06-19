@@ -35,9 +35,23 @@ export interface Settings {
   fontFamily: 'system' | 'serif' | 'mono'
   speed: number
   lineOffset: number // visual shift of the PT pane relative to the EN pane, in text lines
+  sheetsUrl: string // Google Apps Script Web App endpoint for saved-word sync
 }
 
 export interface ReadingPos {
   chapter: number
   paragraph: number
+}
+
+export interface SavedWord {
+  id: string
+  text: string
+  kind: 'word' | 'expression'
+  ipa?: string
+  translations?: string[]
+  context?: string
+  source?: string
+  chapterTitle?: string
+  savedAt: number
+  sentAt?: number
 }

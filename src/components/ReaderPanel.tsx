@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Chapter, Toggles } from '../types'
+import { saveWord } from '../lib/savedWords'
 import WordPopup from './WordPopup'
 
 interface Props {
@@ -9,8 +10,10 @@ interface Props {
   activeParagraph: number
   jumpKey: number
   lineOffset: number
+  bookTitle?: string
   onChangeLineOffset: (n: number) => void
   onSelectParagraph: (index: number) => void
+  onWordSaved?: () => void
   status?: string | null
 }
 
@@ -22,13 +25,31 @@ function cleanWord(tok: string): string {
   return tok.replace(/^[^\p{L}]+/u, '').replace(/[^\p{L}]+$/u, '')
 }
 
-function EnglishText({ text, onWord }: { text: string; onWord: (w: string) => void }) {
+function EnglishText({
+  text,
+  onWord,
+}: {
+  text: string
+  onWord: (w: string, context: string) => void
+}) {
   const tokens = text.split(/(\s+)/)
   return (
     <>
       {tokens.map((tok, i) =>
         HAS_LETTER.test(tok) ? (
-          <button key={i} type="button" className="word" onClick={() => onWord(cleanWord(tok))}>
+          <button
+            key={i}
+            type="button"
+            className="word"
+            onClick={(e) => {
+              // A short click counts as a word lookup; if the user is dragging
+              // to select an expression, the parent selection handler takes over.
+              const sel = window.getSelection()
+              if (sel && sel.toString().trim().length > 1) return
+              e.stopPropagation()
+              onWord(cleanWord(tok), text)
+            }}
+          >
             {tok}
           </button>
         ) : (
@@ -48,12 +69,17 @@ export default function ReaderPanel({
   activeParagraph,
   jumpKey,
   lineOffset,
+  bookTitle,
   onChangeLineOffset,
   onSelectParagraph,
+  onWordSaved,
   status,
 }: Props) {
   const [selected, setSelected] = useState<string | null>(null)
+  const [selectedContext, setSelectedContext] = useState<string | null>(null)
   const [overlayVisible, setOverlayVisible] = useState(false)
+  const [expression, setExpression] = useState<string | null>(null)
+  const [expressionSaved, setExpressionSaved] = useState(false)
   const ptRef = useRef<HTMLDivElement>(null)
   const enRef = useRef<HTMLDivElement>(null)
   const ptParas = useRef<Array<HTMLDivElement | null>>([])
@@ -199,6 +225,51 @@ export default function ReaderPanel({
     }
   }, [])
 
+  // Watch text selection inside the EN pane → show a floating Save bar.
+  useEffect(() => {
+    function onSel() {
+      const sel = window.getSelection()
+      if (!sel || sel.rangeCount === 0) {
+        setExpression(null)
+        return
+      }
+      const txt = sel.toString().trim()
+      if (txt.length < 2) {
+        setExpression(null)
+        return
+      }
+      const en = enRef.current
+      if (!en) return
+      const node = sel.anchorNode
+      if (!node || !en.contains(node instanceof Element ? node : node.parentNode!)) {
+        setExpression(null)
+        return
+      }
+      setExpression(txt)
+      setExpressionSaved(false)
+    }
+    document.addEventListener('selectionchange', onSel)
+    return () => document.removeEventListener('selectionchange', onSel)
+  }, [])
+
+  async function saveExpression() {
+    if (!expression) return
+    await saveWord({
+      text: expression,
+      kind: 'expression',
+      source: bookTitle,
+      chapterTitle: chapter?.title,
+      context: expression,
+    })
+    setExpressionSaved(true)
+    onWordSaved?.()
+    window.setTimeout(() => {
+      window.getSelection()?.removeAllRanges()
+      setExpression(null)
+      setExpressionSaved(false)
+    }, 1100)
+  }
+
   if (!chapter) {
     return (
       <div className="reader">
@@ -287,15 +358,47 @@ export default function ReaderPanel({
                 onClick={() => onSelectParagraph(i)}
               >
                 <p className="para-en">
-                  <EnglishText text={text} onWord={setSelected} />
+                  <EnglishText
+                    text={text}
+                    onWord={(w, ctx) => {
+                      setSelected(w)
+                      setSelectedContext(ctx)
+                    }}
+                  />
                 </p>
               </div>
             ))}
+            {expression && (
+              <div className="expr-bar" onClick={(e) => e.stopPropagation()}>
+                <span className="expr-bar-label">
+                  {expressionSaved ? '✓ Expressão salva' : 'Trecho selecionado'}
+                </span>
+                <button
+                  className="expr-bar-btn"
+                  disabled={expressionSaved}
+                  onClick={saveExpression}
+                >
+                  🔖 {expressionSaved ? 'Salva' : 'Salvar expressão'}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {selected && <WordPopup word={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <WordPopup
+          word={selected}
+          context={selectedContext ?? undefined}
+          source={bookTitle}
+          chapterTitle={chapter?.title}
+          onClose={() => {
+            setSelected(null)
+            setSelectedContext(null)
+          }}
+          onSaved={onWordSaved}
+        />
+      )}
     </div>
   )
 }

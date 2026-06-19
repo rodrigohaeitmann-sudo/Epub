@@ -2,7 +2,9 @@ import type { Settings } from '../types'
 
 interface Props {
   settings: Settings
+  pendingWords: number
   onChange: (settings: Settings) => void
+  onOpenSync: () => void
   onClose: () => void
 }
 
@@ -31,7 +33,13 @@ function formatSpeed(n: number): string {
   return s.replace('.', ',') + '×'
 }
 
-export default function SettingsPanel({ settings, onChange, onClose }: Props) {
+export default function SettingsPanel({
+  settings,
+  pendingWords,
+  onChange,
+  onOpenSync,
+  onClose,
+}: Props) {
   const set = (patch: Partial<Settings>) => onChange({ ...settings, ...patch })
 
   return (
@@ -94,6 +102,18 @@ export default function SettingsPanel({ settings, onChange, onClose }: Props) {
             <span>{formatSpeed(SPEED_MAX)}</span>
           </div>
         </div>
+
+        <button className="setting-link" onClick={onOpenSync}>
+          <span>🔖 Palavras salvas e sincronização</span>
+          <span className="setting-link-meta">
+            {pendingWords > 0
+              ? `${pendingWords} pendente${pendingWords === 1 ? '' : 's'}`
+              : settings.sheetsUrl
+                ? 'Conectado'
+                : 'Configurar'}
+          </span>
+          <span className="setting-link-chev">›</span>
+        </button>
 
       </div>
     </div>

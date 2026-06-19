@@ -13,15 +13,23 @@ import ChapterNav from './components/ChapterNav'
 import AudioChapterNav from './components/AudioChapterNav'
 import SearchPanel from './components/SearchPanel'
 import SettingsPanel from './components/SettingsPanel'
+import SyncPanel from './components/SyncPanel'
+import { getCounts } from './lib/savedWords'
 
 const TOGGLES_KEY = 'epub.toggles'
 const SETTINGS_KEY = 'epub.settings'
 const DEFAULT_TOGGLES: Toggles = { en: true, pt: true }
-const DEFAULT_SETTINGS: Settings = { fontScale: 1, fontFamily: 'system', speed: 1, lineOffset: 0 }
+const DEFAULT_SETTINGS: Settings = {
+  fontScale: 1,
+  fontFamily: 'serif',
+  speed: 1,
+  lineOffset: 0,
+  sheetsUrl: '',
+}
 
 const FONT_STACKS: Record<Settings['fontFamily'], string> = {
-  system: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-  serif: "Georgia, 'Times New Roman', serif",
+  system: "'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+  serif: "'Newsreader', Georgia, 'Times New Roman', serif",
   mono: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
 }
 
@@ -58,8 +66,20 @@ export default function App() {
   const [showChapters, setShowChapters] = useState(false)
   const [showAudioChapters, setShowAudioChapters] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
+  const [showSync, setShowSync] = useState(false)
+  const [pendingWords, setPendingWords] = useState(0)
   const [jumpKey, setJumpKey] = useState(0)
   const inFlight = useRef<Set<string>>(new Set())
+
+  function refreshPending() {
+    void getCounts()
+      .then((c) => setPendingWords(c.pending))
+      .catch(() => {})
+  }
+
+  useEffect(() => {
+    refreshPending()
+  }, [])
 
   const { audioRef, currentTime, duration, isPlaying, togglePlay, seekTo, skipBy } = useAudio(
     media?.bookId,
@@ -270,8 +290,10 @@ export default function App() {
         activeParagraph={paragraphIndex}
         jumpKey={jumpKey}
         lineOffset={settings.lineOffset}
+        bookTitle={media.book.title}
         onChangeLineOffset={(n) => setSettings((s) => ({ ...s, lineOffset: n }))}
         onSelectParagraph={selectParagraph}
+        onWordSaved={refreshPending}
         status={transStatus}
       />
       <ControlsFooter isPlaying={isPlaying} onTogglePlay={togglePlay} onSkip={skipBy} />
@@ -307,8 +329,24 @@ export default function App() {
       {showSettings && (
         <SettingsPanel
           settings={settings}
+          pendingWords={pendingWords}
           onChange={setSettings}
+          onOpenSync={() => {
+            setShowSettings(false)
+            setShowSync(true)
+          }}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+      {showSync && (
+        <SyncPanel
+          sheetsUrl={settings.sheetsUrl}
+          onChangeUrl={(url) => setSettings((s) => ({ ...s, sheetsUrl: url }))}
+          onChanged={refreshPending}
+          onClose={() => {
+            setShowSync(false)
+            refreshPending()
+          }}
         />
       )}
     </div>
