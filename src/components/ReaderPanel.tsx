@@ -37,9 +37,12 @@ function EnglishText({
     <>
       {tokens.map((tok, i) =>
         HAS_LETTER.test(tok) ? (
-          <button
+          // Render as <span> (not <button>) so iOS/WebKit lets the user drag
+          // a text selection across words for the "Salvar expressão" flow.
+          <span
             key={i}
-            type="button"
+            role="button"
+            tabIndex={0}
             className="word"
             onClick={(e) => {
               // A short click counts as a word lookup; if the user is dragging
@@ -51,7 +54,7 @@ function EnglishText({
             }}
           >
             {tok}
-          </button>
+          </span>
         ) : (
           <span key={i}>{tok}</span>
         ),

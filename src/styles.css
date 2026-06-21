@@ -1023,6 +1023,17 @@ button {
   border-radius: 4px;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.12s;
+  /* Allow dragging a selection across word buttons (Safari/WebKit default
+     <button> to user-select:none, which blocks the "Salvar expressão" flow). */
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+.pane-en,
+.para-en {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .word:active {

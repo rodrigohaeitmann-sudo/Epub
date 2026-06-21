@@ -31,15 +31,21 @@ export default function FileSetup({ onReady }: Props) {
         coverUrl,
         chapters: parsed.chapters,
       }
+      // Persist BEFORE handing off so the session survives an immediate
+      // close/reload. Audiobook blobs can be large; do it in-band so the user
+      // sees the player only after the data is durably in IndexedDB.
+      try {
+        await saveSession({
+          bookId,
+          audioBlob: audio,
+          coverBlob: parsed.coverBlob,
+          book: { title: parsed.title, author: parsed.author, chapters: parsed.chapters },
+          audioChapters,
+        })
+      } catch {
+        /* ignore — best-effort persistence */
+      }
       onReady({ audioUrl: URL.createObjectURL(audio), bookId, book, audioChapters })
-      // Persist for auto-reopen in the background (best-effort).
-      void saveSession({
-        bookId,
-        audioBlob: audio,
-        coverBlob: parsed.coverBlob,
-        book: { title: parsed.title, author: parsed.author, chapters: parsed.chapters },
-        audioChapters,
-      }).catch(() => {})
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao ler o EPUB.')
       setBusy(false)
@@ -77,7 +83,7 @@ export default function FileSetup({ onReady }: Props) {
       {error && <p className="setup-error">{error}</p>}
 
       <button className="start-btn" disabled={!canStart} onClick={handleStart}>
-        {busy ? 'Abrindo…' : 'Começar'}
+        {busy ? 'Preparando…' : 'Começar'}
       </button>
     </div>
   )
