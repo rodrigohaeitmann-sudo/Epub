@@ -6,9 +6,11 @@ import { saveSession } from '../lib/sessionStore'
 
 interface Props {
   onReady: (media: LoadedBook) => void
+  // True when a previous session existed but the browser evicted its storage.
+  lostSession?: boolean
 }
 
-export default function FileSetup({ onReady }: Props) {
+export default function FileSetup({ onReady, lostSession }: Props) {
   const [epub, setEpub] = useState<File | null>(null)
   const [audio, setAudio] = useState<File | null>(null)
   const [error, setError] = useState('')
@@ -59,6 +61,15 @@ export default function FileSetup({ onReady }: Props) {
         Selecione um EPUB em inglês e o áudio do audiobook. A tradução em português é
         gerada dentro do app conforme você lê.
       </p>
+
+      {lostSession && (
+        <p className="setup-lost">
+          O navegador apagou os arquivos da sessão anterior para liberar espaço. Carregue o
+          livro e o áudio novamente — para evitar que isso se repita, instale o app na tela
+          inicial (Compartilhar → Adicionar à Tela de Início) e mantenha espaço livre no
+          aparelho.
+        </p>
+      )}
 
       <label className="file-field">
         <span>Livro (.epub)</span>

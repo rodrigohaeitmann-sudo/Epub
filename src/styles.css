@@ -111,6 +111,16 @@ button {
   border-radius: 12px;
 }
 
+.setup-lost {
+  color: var(--accent);
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
 .start-btn {
   margin-top: auto;
   background: var(--accent);
@@ -1009,6 +1019,109 @@ button {
   background: var(--accent-soft);
   border-color: var(--accent-border);
   color: var(--accent);
+}
+
+.chapter-item-done {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pt);
+}
+
+/* ---------- Offline translations (chapter list header) ---------- */
+.offline-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.offline-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.offline-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.offline-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.offline-btn {
+  width: 100%;
+  height: 42px;
+  border: none;
+  border-radius: 11px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.offline-btn:disabled {
+  background: var(--pt-soft);
+  border: 1px solid var(--pt-border);
+  color: var(--pt);
+}
+
+.offline-run {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.offline-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.offline-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.4s;
+}
+
+.offline-run-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.offline-run-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.offline-cancel {
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  padding: 6px 12px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 /* ---------- Tappable English words ---------- */

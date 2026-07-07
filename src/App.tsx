@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { LoadedBook, ReadingPos, Settings, Toggles, TrackKey, Translations } from './types'
 import { useAudio } from './hooks/useAudio'
-import { loadSession, loadTranslations, saveTranslation, saveSession } from './lib/sessionStore'
+import {
+  loadSession,
+  loadTranslations,
+  requestPersistentStorage,
+  saveSession,
+  saveTranslation,
+  sessionWasLost,
+} from './lib/sessionStore'
 import { translateParagraphs } from './lib/translate'
 import { parseAudioChapters } from './lib/parseAudioChapters'
 import FileSetup from './components/FileSetup'
@@ -69,6 +76,10 @@ export default function App() {
   const [showSync, setShowSync] = useState(false)
   const [pendingWords, setPendingWords] = useState(0)
   const [jumpKey, setJumpKey] = useState(0)
+  const [lostSession, setLostSession] = useState(false)
+  // Bulk "offline translations" download: null when idle.
+  const [bulk, setBulk] = useState<{ done: number; total: number; title: string } | null>(null)
+  const bulkCancel = useRef(false)
   const inFlight = useRef<Set<string>>(new Set())
 
   function refreshPending() {
@@ -135,9 +146,13 @@ export default function App() {
 
   // Reopen the last session automatically (e.g. after the app is backgrounded).
   useEffect(() => {
+    requestPersistentStorage()
     loadSession()
       .then(async (session) => {
-        if (!session) return
+        if (!session) {
+          setLostSession(sessionWasLost(session))
+          return
+        }
         const coverUrl = session.coverBlob ? URL.createObjectURL(session.coverBlob) : undefined
         let audioChapters = session.audioChapters ?? []
         // Sessions saved before audio-chapter support (or that failed to parse)
@@ -155,7 +170,7 @@ export default function App() {
           audioChapters,
         })
       })
-      .catch(() => undefined)
+      .catch(() => setLostSession(sessionWasLost(null)))
       .finally(() => setRestoring(false))
   }, [])
 
@@ -225,6 +240,40 @@ export default function App() {
       })
   }, [media, toggles.pt, chapter, translations])
 
+  // Download translations for every untranslated chapter so reading works
+  // offline. Runs in the background even with the chapter list closed;
+  // each chapter is persisted to IndexedDB as soon as it finishes.
+  async function startBulkTranslate() {
+    if (!media || bulk) return
+    const pending = media.book.chapters.filter((c) => !translations[c.id])
+    if (pending.length === 0) return
+    bulkCancel.current = false
+    let done = 0
+    setBulk({ done, total: pending.length, title: pending[0].title })
+    for (const c of pending) {
+      if (bulkCancel.current) break
+      setBulk({ done, total: pending.length, title: c.title })
+      if (!inFlight.current.has(c.id)) {
+        inFlight.current.add(c.id)
+        try {
+          const pt = await translateParagraphs(c.paragraphs)
+          setTranslations((t) => ({ ...t, [c.id]: pt }))
+          await saveTranslation(media.bookId, c.id, pt).catch(() => {})
+        } catch {
+          /* keep going with the next chapter */
+        } finally {
+          inFlight.current.delete(c.id)
+        }
+      }
+      done++
+    }
+    setBulk(null)
+  }
+
+  function cancelBulkTranslate() {
+    bulkCancel.current = true
+  }
+
   function handleToggle(key: TrackKey) {
     setToggles((t) => ({ ...t, [key]: !t[key] }))
   }
@@ -245,6 +294,7 @@ export default function App() {
   }
 
   function handleBack() {
+    bulkCancel.current = true
     if (media) {
       URL.revokeObjectURL(media.audioUrl)
       if (media.book.coverUrl) URL.revokeObjectURL(media.book.coverUrl)
@@ -258,7 +308,15 @@ export default function App() {
   }
 
   if (!media) {
-    return <FileSetup onReady={setMedia} />
+    return (
+      <FileSetup
+        lostSession={lostSession}
+        onReady={(m) => {
+          setLostSession(false)
+          setMedia(m)
+        }}
+      />
+    )
   }
 
   const stageStyle = {
@@ -301,6 +359,10 @@ export default function App() {
         <ChapterNav
           chapters={chapters}
           current={chapterIndex}
+          translations={translations}
+          bulk={bulk}
+          onTranslateAll={() => void startBulkTranslate()}
+          onCancelBulk={cancelBulkTranslate}
           onSelect={goToChapter}
           onClose={() => setShowChapters(false)}
         />
